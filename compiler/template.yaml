@@ -122,6 +122,15 @@ parameters:
   description: |
     If provided we create a BaselineDB on this path.
 
+- name: Environment
+  description: A set of custom environment variables to expand
+  type: csv
+  default: |
+    Name,Value
+    SystemRoot,C:\Windows
+    WinDir,C:\Windows
+    System32,C:\Windows\System32
+
 required_permissions:
 - FILESYSTEM_WRITE
 
@@ -136,14 +145,8 @@ export: |
     LET CollectionPolicy <= S.CollectionPolicy || "ExcludeSigned"
     LET RemappingStrategy <= S.RemappingStrategy || "API And NTUser.dat"
 
-    LET CollectionPolicy <= if(condition=RemappingStrategy =~ "API",
-      then= CollectionPolicy,
-      else=log(message="CollectionPolicy set to None as RemappingStrategy strategy is not API based") && "None")
-
     LET MaxFileSize <= S.MaxFileSize || 100000000
     LET MaxHashSize <= S.MaxHashSize || 100000000
-
-    LET _ <= log(message="MaxFileSize %v, MaxHashSize %v", args=[ MaxFileSize, MaxHashSize])
 
     // In ExcludeSigned and HashOnly we dont upload signed binaries.
     LET ShouldUploadSignedBinary <= dict(
@@ -185,12 +188,12 @@ export: |
       condition=Details.Stat AND Details.Stat.Size < MaxHashSize
                 AND NOT OSPath =~ TrustedPathRegex,
       then=Details + dict(Hashes=hash(path=OSPath),
-                          Magic=magic(path=OSPath)),
+                          Magic=magic(path=OSPath, accessor="auto")),
       else=Details)
 
     // Calculate the details column with hashes and magic.
     LET _GetDetails(OSPath) = if(
-    condition= CollectionPolicy =~ "None" OR NOT OSPath.Components,
+    condition= NOT OSPath.Components,
     then=dict(),
     else=MaybeUpload(OSPath=OSPath, Details=MaybeBinary(
       OSPath=OSPath,
@@ -408,17 +411,21 @@ export: |
         `^system32\\\\`="%SystemRoot%\\System32\\",
         `^{.+}.+`="\\$0",
         `^C:\\\\Program Files[^\\\\]*\\\\[^ ]+`='"$0"',
-        `^%[^ ]+%[^ ]+`='"$0"'
+        `^%[^ ]+%[^ ]+`='"$0"',
+        `^c:`="C:"
       )
 
     // Extract the binary from the command line
-    LET ExpandPath(Path) = lowcase(string=commandline_split(
-    command=expand(path=regex_transform(source=Path,
-      map=_ExpandedTransforms)))[0])
+    LET ExpandPath(Path) = commandline_split(
+    command=expand(path=regex_transform(source=lowcase(string=Path),
+      map=_ExpandedTransforms)))[0]
 
 sources:
 - name: Remapping
   query: |
+    LET _ <= log(message="MaxFileSize %v, MaxHashSize %v",
+                 args=[ MaxFileSize, MaxHashSize])
+
     SELECT * FROM RemapRules
 
   notebook:
@@ -513,6 +520,11 @@ sources:
     })
 
     LET ShouldLog <= NOT DEBUG
+
+    // Add any environment variables
+    LET _ <= SELECT set(item=_ExpandedTransforms,
+      field=format(format="%%%s%%", args=Name), value=Value)
+    FROM foreach(row=S.Environment)
 
     LET Cache <= memoize(query={
        SELECT Glob, Category, Description,
