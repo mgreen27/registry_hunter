@@ -127,9 +127,14 @@ parameters:
   type: csv
   default: |
     Name,Value
-    SystemRoot,C:\Windows
-    WinDir,C:\Windows
-    System32,C:\Windows\System32
+    APPDATA,C:\Users\%USERNAME%\AppData\Roaming
+    LOCALAPPDATA,C:\Users\%USERNAME%\AppData\Local
+    USERPROFILE,C:\Users\%USERNAME%
+    ALLUSERSPROFILE,C:\ProgramData
+    ProgramFiles,C:\Program Files
+    PUBLIC,C:\Users\Public
+    windir,C:\Windows
+    SystemDrive,C:
 
 required_permissions:
 - FILESYSTEM_WRITE
