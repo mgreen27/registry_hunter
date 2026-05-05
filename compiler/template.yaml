@@ -127,6 +127,9 @@ parameters:
   type: csv
   default: |
     Name,Value
+    SystemRoot,C:\Windows
+    WinDir,C:\Windows
+    System32,C:\Windows\System32
     APPDATA,C:\Users\%USERNAME%\AppData\Roaming
     LOCALAPPDATA,C:\Users\%USERNAME%\AppData\Local
     USERPROFILE,C:\Users\%USERNAME%
