@@ -290,7 +290,7 @@ Rules:
   Details: |
     x=> dict(filename= GetDetails(OSPath=ExpandPath(Path=rot13(string=x.OSPath.Basename))).filename,
             NumberOfExecutions=_ExtractUserAssist(Data=x.Data).NumberOfExecutions,
-            LastExecutionTime=_ExtractUserAssist(Data=x.Data).LastExecution) +
+            LastExecutionTime=_ExtractUserAssist(Data=x.Data).LastExecution || Null ) +
       GetDetails(OSPath=ExpandPath(Path=rot13(string=x.OSPath.Basename)))
 
 
